@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<style>
+    table{
+        width:1000px;
+        border-collapse:collapse;
+        margin: 0 auto;
+        border:1px solid #000;
+    }
+    .add{
+        display: block;
+        width:998px;
+        height:30px;
+        font-size:20px;
+        text-align: center;
+        line-height: 30px;
+        border:1px solid #000;
+        border-top:none;
+        margin:0 auto;
+        cursor: pointer;
+        text-decoration: none;
+        color:#FF0000;
+    }
+    th,td{
+        border:1px solid #000;
+        text-align: center;
+    }
+    .wait{
+        width: 5px;
+        height: 15px;
+        background: #000;
+        position: fixed;
+        left: 0;
+        right: 0;
+        top:0;
+        bottom:0;
+        animation: wait 1s ease infinite alternate;
+        margin: auto;
+    }
+    .wait:before{
+        width: 5px;
+        height: 15px;
+        background: #000;
+        position: absolute;
+        top:0;
+        left:10px;
+        display: block;
+        animation-delay: -1s; /*延迟时间*/
+        content: "";/*撑开容器*/
+    }
+    .wait:after{
+        width: 5px;
+        height: 15px;
+        background: #000;
+        position: absolute;
+        top:0;
+        left:20px;
+        display: block;
+        content: "";
+    }
+    @keyframes wait {/*动画，关键帧  加动画的名称*/
+        0%{
+            transform: scale(1);/*缩放函数*/
+        }
+        100%{
+            transform: scale(2,2);
+        }
+    }
+    input{
+        width: 80px;
+    }
+    .del{
+        color: #FF0000;
+    }
+</style>
+<script src="ajax.js"></script>
+<script>
+    window.onload=function () {
+        //声明
+        var tbody=document.querySelector("tbody");
+        var wait=document.getElementsByClassName("wait")[0];
+        var add=document.getElementsByClassName("add")[0];
+        ajax({//在数据库中找数据
+            url:"1.php",
+            dataType:"json",
+            success:function (e) {
+                wait.style.display="none";
+                //console.log(e);
+                var str="";
+                for(var i=0;i<e.length;i++){
+                    str+="<tr id="+e[i].id+">";
+                    str+="<td attr='name'>"+e[i].name+"</td>";
+                    str+="<td attr='age'>"+e[i].age+"</td>";
+                    str+="<td attr='sex'>"+e[i].sex+"</td>";
+                    str+="<td><div class='del'>删除</div></td>";
+                    str+="</tr>";
+                }
+                tbody.innerHTML=str;
+            }
+        });
+        //添加
+        add.onclick=function () {
+            wait.style.display="block";
+            ajax({
+                url:"add.php",
+                success:function (e) {
+                    wait.style.display="none";
+                    //创建tr标签，td加入到tr中，id名  最后加入到页面中
+                    var tr=document.createElement("tr");
+                    var str="";
+                    str+="<td attr='name'> </td>";
+                    str+="<td attr='age'> </td>";
+                    str+="<td attr='sex'> </td>";
+                    str+="<td><div class='del'>删除</div></td>";
+                    tr.setAttribute("id",e);
+                    tr.innerHTML=str;
+                    tbody.appendChild(tr);
+                }
+            })
+        }
+        //删除
+        tbody.onclick=function (e) {
+            //因为添加的元素也要删除，所以用事件委派
+            // 删除要用到 删除它tr的id
+            var ev = e.target || ev.srcElement;
+            if (ev.className == "del") {
+                var parent = ev.parentNode.parentNode;
+                var id = parent.id;
+                wait.style.display = "block";
+                ajax({
+                    url: "del.php",
+                    data: {id: id},
+                    success: function (e) {
+                        wait.style.display = "none";
+                        tbody.removeChild(parent);
+                    }
+                })
+            } else if (ev.nodeName == "TD") {
+                var input = document.createElement("input");//创建input表单
+                var value = ev.innerHTML;//旧的东西
+                input.value = value;
+                ev.innerHTML = "";//清空
+                ev.appendChild(input);//写入到表单中
+                input.focus();
+                input.onblur = function () {
+                    wait.style.display="block";
+                    var val = this.value;//当前的value
+                    if (val == "" || val == value) {
+                        wait.style.display="none";
+                        ev.innerText = value;
+                    } else {
+                        var id = ev.parentNode.id;//td的id
+                        ajax({
+                            data: {id: id, attr: ev.className, value: val},//id确定修改的哪一行，attr 哪一咧，value 值
+                            url: "insert.php",
+                            success: function (e) {
+                                wait.style.display="none";
+                                     console.log("修改成功");
+                                    ev.innerText = val;
+
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+
+</script>
+
+
+<!--
+1.通过ajax取数据
+2.mysqli 连接数据库的方式
+-->
+<body>
+<table>
+    <thead>
+        <tr>
+            <th>姓名</th>
+            <th>年龄</th>
+            <th>性别</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+
+    </tbody>
+</table>
+<div class="add">+</div>
+<div class="wait"></div>
+</body>
+</html>
