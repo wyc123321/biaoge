@@ -78,17 +78,18 @@
     }
 </style>
 <script src="ajax.js"></script>
+<script src="jquery.js"></script>
 <script>
     window.onload=function () {
         //声明
-        var tbody=document.querySelector("tbody");
-        var wait=document.getElementsByClassName("wait")[0];
-        var add=document.getElementsByClassName("add")[0];
-        ajax({//在数据库中找数据
+//        var tbody=document.querySelector("tbody");
+//        var wait=document.getElementsByClassName("wait")[0];
+//        var add=document.getElementsByClassName("add")[0];
+        $.ajax({//在数据库中找数据
             url:"1.php",
             dataType:"json",
             success:function (e) {
-                wait.style.display="none";
+                $(".wait").css("display","none");
                 //console.log(e);
                 var str="";
                 for(var i=0;i<e.length;i++){
@@ -99,75 +100,116 @@
                     str+="<td><div class='del'>删除</div></td>";
                     str+="</tr>";
                 }
-                tbody.innerHTML=str;
+                $("tbody").html(str);
             }
         });
         //添加
-        add.onclick=function () {
-            wait.style.display="block";
-            ajax({
-                url:"add.php",
+        $(".add").click(function () {
+           $(".wait").css("display","block");
+           $.ajax({
+               url:"add.php",
                 success:function (e) {
-                    wait.style.display="none";
-                    //创建tr标签，td加入到tr中，id名  最后加入到页面中
-                    var tr=document.createElement("tr");
+                    $(".wait").css("display","none");
                     var str="";
-                    str+="<td attr='name'> </td>";
-                    str+="<td attr='age'> </td>";
-                    str+="<td attr='sex'> </td>";
+                    str+="<tr id="+e+">";
+                    str+="<td attr='name'></td>";
+                    str+="<td attr='age'></td>";
+                    str+="<td attr='sex'></td>";
                     str+="<td><div class='del'>删除</div></td>";
-                    tr.setAttribute("id",e);
-                    tr.innerHTML=str;
-                    tbody.appendChild(tr);
+                    str+="</tr>";
+                    $("tbody").append(str);
+
                 }
-            })
-        }
+           })
+        })
+//        add.onclick=function () {
+//            wait.style.display="block";
+//            ajax({
+//                url:"add.php",
+//                success:function (e) {
+//                    wait.style.display="none";
+//                    //创建tr标签，td加入到tr中，id名  最后加入到页面中
+//                    var tr=document.createElement("tr");
+//                    var str="";
+//                    str+="<td attr='name'> </td>";
+//                    str+="<td attr='age'> </td>";
+//                    str+="<td attr='sex'> </td>";
+//                    str+="<td><div class='del'>删除</div></td>";
+//                    tr.setAttribute("id",e);
+//                    tr.innerHTML=str;
+//                    tbody.appendChild(tr);
+//                }
+//            })
+//        }
         //删除
-        tbody.onclick=function (e) {
-            //因为添加的元素也要删除，所以用事件委派
-            // 删除要用到 删除它tr的id
+        $("tbody").click(function (e) {
             var ev = e.target || ev.srcElement;
-            if (ev.className == "del") {
-                var parent = ev.parentNode.parentNode;
-                var id = parent.id;
-                wait.style.display = "block";
-                ajax({
+            if(ev.className=="del"){
+                var parent = $(ev).parent().parent();
+                var id = parent.attr("id");
+                //console.log(id)
+                $("wait").css("display","block");
+                $.ajax({
                     url: "del.php",
                     data: {id: id},
                     success: function (e) {
-                        wait.style.display = "none";
-                        tbody.removeChild(parent);
+                        $(".wait").css("display","none");
+                        parent.remove();
                     }
                 })
-            } else if (ev.nodeName == "TD") {
-                var input = document.createElement("input");//创建input表单
-                var value = ev.innerHTML;//旧的东西
-                input.value = value;
-                ev.innerHTML = "";//清空
-                ev.appendChild(input);//写入到表单中
+            }
+        })
+//        tbody.onclick=function (e) {
+//            //因为添加的元素也要删除，所以用事件委派
+//            // 删除要用到 删除它tr的id
+//            var ev = e.target || ev.srcElement;
+//            if (ev.className == "del") {
+//                var parent = ev.parentNode.parentNode;
+//                var id = parent.id;
+//                wait.style.display = "block";
+//                ajax({
+//                    url: "del.php",
+//                    data: {id: id},
+//                    success: function (e) {
+//                        wait.style.display = "none";
+//                        tbody.removeChild(parent);
+//                    }
+//                })
+//            }
+//             }
+            //用jquery实现编辑
+            $("tbody").delegate("td","dblclick",function () {//事件委派
+                var that=$(this);
+                var oldv=$(this).html();//td中的值声明给oldv
+                console.log(oldv);
+                $(this).html("");//值为空
+                var input=$("<input>").val(oldv).appendTo(this);
                 input.focus();
-                input.onblur = function () {
-                    wait.style.display="block";
-                    var val = this.value;//当前的value
-                    if (val == "" || val == value) {
-                        wait.style.display="none";
-                        ev.innerText = value;
-                    } else {
-                        var id = ev.parentNode.id;//td的id
-                        ajax({
-                            data: {id: id, attr: ev.className, value: val},//id确定修改的哪一行，attr 哪一咧，value 值
-                            url: "insert.php",
-                            success: function (e) {
-                                wait.style.display="none";
-                                     console.log("修改成功");
-                                    ev.innerText = val;
+                input.blur(function () {
+                    $(".wait").css("display","block");
+                    var id=that.parent().attr("id");
+                    var attr=that.attr("attr");
+                    var newv=$(this).val();
+                    console.log(id,attr,newv);
+                    if(newv==oldv){
+                        this.remove();
+                        that.html(newv);
+                    }else{
+                        $.ajax({
+                            url:"insert.php",
+                            data:{id:id,attr:attr,value:newv},
+                            success:function (e) {
+                                console.log(e);
+                                $(".wait").css("display","none");
+                                    input.remove();
+                                    that.html(newv);
 
                             }
-                        });
+                        })
                     }
-                }
-            }
-        }
+                })
+          })
+
     }
 
 
